@@ -1,39 +1,51 @@
 import { useState } from "react";
-import axios from "axios";
 
 function App() {
   const [user,setUser] = useState("");
   const [pass,setPass] = useState("");
   const [logged,setLogged] = useState(false);
-  const [progress, setProgress] = useState("");
-  const [delay, setDelay] = useState("");
-  const [experience, setExperience] = useState("");
+  const [progress, setProgress] = useState("80");
+  const [delay, setDelay] = useState("2");
+  const [experience, setExperience] = useState("5");
   const [result, setResult] = useState("");
 
   const API_URL = 'https://web-production-4bf8.up.railway.app';
 
   const login = async () => {
     try {
-      const res = await axios.post(`${API_URL}/login?username=${user}&password=${pass}`);
-      localStorage.setItem("token", res.data.token);
+      const res = await fetch(`${API_URL}/login?username=${user}&password=${pass}`);
+      const data = await res.json();
+      localStorage.setItem("token", data.token);
       setLogged(true);
+      alert("✅ Login success!");
     } catch {
-      alert("Login failed! Try: admin / 1234");
+      alert("❌ Login failed! admin/1234");
     }
   };
 
   const predict = async () => {
+    const token = localStorage.getItem("token");
+    alert(`Token: ${token ? "✅ OK" : "❌ MISSING"}`);
+    
     try {
-      const res = await axios.post(`${API_URL}/predict`, {
-        progress: parseInt(progress),
-        delay: parseInt(delay),
-        experience: parseInt(experience),
-      }, {
-        headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+      const res = await fetch(`${API_URL}/predict`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          progress: parseInt(progress),
+          delay: parseInt(delay),
+          experience: parseInt(experience)
+        })
       });
-      setResult(res.data.risk);
-    } catch {
-      alert("Prediction failed!");
+      
+      const data = await res.json();
+      setResult(data.risk);
+      alert(`✅ ${data.risk} Risk!`);
+    } catch (error) {
+      alert("❌ Prediction failed - check backend!");
     }
   };
 
@@ -64,11 +76,11 @@ function App() {
     <div style={style}>
       <h1>🏗️ Project Risk Predictor</h1>
       <input style={{display:'block',margin:'10px auto',padding:'10px',width:'250px'}} 
-             placeholder="Progress % (0-100)" onChange={(e)=>setProgress(e.target.value)} />
+             value={progress} onChange={(e)=>setProgress(e.target.value)} placeholder="Progress %"/>
       <input style={{display:'block',margin:'10px auto',padding:'10px',width:'250px'}} 
-             placeholder="Delay days (0-30)" onChange={(e)=>setDelay(e.target.value)} />
+             value={delay} onChange={(e)=>setDelay(e.target.value)} placeholder="Delay days"/>
       <input style={{display:'block',margin:'10px auto',padding:'10px',width:'250px'}} 
-             placeholder="Experience years (0-10)" onChange={(e)=>setExperience(e.target.value)} />
+             value={experience} onChange={(e)=>setExperience(e.target.value)} placeholder="Experience"/>
       <button style={{padding:'12px 30px',fontSize:'16px',background:'#28a745',color:'white',border:'none',borderRadius:'5px',marginTop:'20px'}} 
               onClick={predict}>Predict Risk 🚀</button>
       {result && (
@@ -79,6 +91,8 @@ function App() {
           {result} Risk ⚠️
         </h2>
       )}
+      <button style={{padding:'8px 20px',background:'#6c757d',color:'white',border:'none',borderRadius:'5px',marginTop:'20px'}} 
+              onClick={() => {localStorage.clear(); window.location.reload();}}>Logout</button>
     </div>
   );
 }
